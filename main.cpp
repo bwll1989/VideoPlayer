@@ -29,10 +29,10 @@ int free_sdl();
 
 int main() {
     cout << "FFmpeg, 解封装" << endl;
-    av_register_all();
+    //av_register_all();
     //4.0之后的FFMPEG已弃用，可以不声明
     avformat_network_init();
-    avcodec_register_all();
+    //avcodec_register_all();
     //4.0之后的FFMPEG已弃用，可以不声明
     string source_url = "/Users/wubin/Documents/Vscode/untitled/cmake-build-release/test.mp4";
 
