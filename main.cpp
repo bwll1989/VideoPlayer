@@ -6,6 +6,7 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
+#include "libavdevice/avdevice.h"
 #include <SDL2/SDL.h>
 }
 using namespace std;
@@ -15,7 +16,9 @@ static AVCodec *videoCodec = NULL;
 static AVCodecContext *codec_ctx_video = NULL;
 static int mWidth, mHeight;
 static int index_video_stream = -1;
+//输入视频流
 static int index_audio_stream=-1;
+//输入音频流
 
 //SDL
 SDL_Rect rect;
@@ -61,6 +64,11 @@ int main() {
     //输出音频编码
     cout<<"音频通道数："<<fmt_ctx->streams[index_audio_stream]->codecpar->channels<<endl;
     cout << "thread_count = " << codec_ctx_video->thread_count << endl;
+    for(unsigned i=0;i<fmt_ctx->nb_streams;i++){
+        cout<<i<<endl;
+        cout<<av_get_media_type_string(fmt_ctx->streams[i]->codec->codec_type)<<endl;
+    }
+
     if ((avcodec_open2(codec_ctx_video, videoCodec, NULL)) < 0) {
         cout << "cannot open specified audio codec" << endl;
     }
@@ -70,6 +78,7 @@ int main() {
     //分配解码后的数据存储位置
     AVPacket *avPacket = av_packet_alloc();
     AVFrame *avFrame = av_frame_alloc();
+
 
 
 
@@ -99,6 +108,7 @@ int main() {
             continue;
         }
         while (avcodec_receive_frame(codec_ctx_video, avFrame) == 0) {
+
             SDL_UpdateYUVTexture(texture, NULL,
                                  avFrame->data[0], avFrame->linesize[0],
                                  avFrame->data[1], avFrame->linesize[1],
@@ -115,7 +125,9 @@ int main() {
             SDL_RenderCopy(renderer, texture, NULL, &rect);
             SDL_RenderPresent(renderer);
             SDL_Delay(1000/30); // 防止显示过快，如果要实现倍速播放，只需要调整delay时间就可以了。
+
         }
+
         SDL_Event event;
         SDL_PollEvent(&event);
         if (event.type==SDL_QUIT) {
@@ -128,6 +140,7 @@ int main() {
 
             }
         }
+
     }
 
     free_sdl();
