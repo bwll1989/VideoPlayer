@@ -15,6 +15,7 @@ static AVCodec *videoCodec = NULL;
 static AVCodecContext *codec_ctx_video = NULL;
 static int mWidth, mHeight;
 static int index_video_stream = -1;
+static int index_audio_stream=-1;
 
 //SDL
 SDL_Rect rect;
@@ -43,6 +44,7 @@ int main() {
 
     // 找到所有流,初始化一些基本参数
     index_video_stream = av_find_best_stream(fmt_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+    index_audio_stream= av_find_best_stream(fmt_ctx,AVMEDIA_TYPE_AUDIO,-1,-1,NULL,0);
     mWidth = fmt_ctx->streams[index_video_stream]->codecpar->width;
     mHeight = fmt_ctx->streams[index_video_stream]->codecpar->height;
 
@@ -51,7 +53,13 @@ int main() {
     codec_ctx_video = avcodec_alloc_context3(videoCodec); // 根据解码器类型分配解码器上下文内存
     avcodec_parameters_to_context(codec_ctx_video, fmt_ctx->streams[index_video_stream]->codecpar); // 拷贝参数
     codec_ctx_video->thread_count = 8; // 解码线程数量
-
+    cout<<fmt_ctx->duration/1000000/60<<"分"<<fmt_ctx->duration/1000000%60<<"秒"<<endl;
+    //输出视频总时长
+    cout<<"视频编码："<<avcodec_get_name(fmt_ctx->streams[index_video_stream]->codecpar->codec_id)<<endl;
+    //输出视频编码
+    cout<<"音频编码："<<avcodec_get_name(fmt_ctx->streams[index_audio_stream]->codecpar->codec_id)<<endl;
+    //输出音频编码
+    cout<<"音频通道数："<<fmt_ctx->streams[index_audio_stream]->codecpar->channels<<endl;
     cout << "thread_count = " << codec_ctx_video->thread_count << endl;
     if ((avcodec_open2(codec_ctx_video, videoCodec, NULL)) < 0) {
         cout << "cannot open specified audio codec" << endl;
@@ -75,8 +83,10 @@ int main() {
             break;
         }
 
-        if (avPacket->stream_index != index_video_stream) { // 目前只显示视频数据
-            av_packet_unref(avPacket); // 注意清理，容易造成内存泄漏
+        if (avPacket->stream_index != index_video_stream) {
+            // 目前只显示视频数据,监测到非视频流则抛弃
+            av_packet_unref(avPacket);
+            // 注意清理，容易造成内存泄漏
             cout<<"丢弃音频流"<<endl;
             continue;
         }
