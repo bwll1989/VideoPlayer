@@ -9,17 +9,21 @@ extern "C" {
 #include "libavdevice/avdevice.h"
 #include <SDL2/SDL.h>
 }
+#define SDL_AUDIO_BUFFER_SIZE 1024
+#define MAX_AUDIO_FRAME_SIZE 192000
 using namespace std;
 
 static AVFormatContext *fmt_ctx = NULL;
 static AVCodec *videoCodec = NULL;
 static AVCodecContext *codec_ctx_video = NULL;
+static AVCodec *audioCodec = NULL;
+static AVCodecContext *codec_ctx_audio = NULL;
 static int mWidth, mHeight;
 static int index_video_stream = -1;
 //输入视频流
 static int index_audio_stream=-1;
 //输入音频流
-
+SDL_AudioSpec wanted_spec;
 //SDL
 SDL_Rect rect;
 Uint32 pixformat;
@@ -48,26 +52,27 @@ int main() {
     // 找到所有流,初始化一些基本参数
     index_video_stream = av_find_best_stream(fmt_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
     index_audio_stream= av_find_best_stream(fmt_ctx,AVMEDIA_TYPE_AUDIO,-1,-1,NULL,0);
+    cout<<"文件streams数量："<<fmt_ctx->nb_streams<<endl;
     mWidth = fmt_ctx->streams[index_video_stream]->codecpar->width;
     mHeight = fmt_ctx->streams[index_video_stream]->codecpar->height;
-
-    // 找到并打开解码器
+    // 找到并打开视频解码器
     videoCodec = avcodec_find_decoder(fmt_ctx->streams[index_video_stream]->codecpar->codec_id);
     codec_ctx_video = avcodec_alloc_context3(videoCodec); // 根据解码器类型分配解码器上下文内存
     avcodec_parameters_to_context(codec_ctx_video, fmt_ctx->streams[index_video_stream]->codecpar); // 拷贝参数
     codec_ctx_video->thread_count = 8; // 解码线程数量
-    cout<<fmt_ctx->duration/1000000/60<<"分"<<fmt_ctx->duration/1000000%60<<"秒"<<endl;
-    //输出视频总时长
-    cout<<"视频编码："<<avcodec_get_name(fmt_ctx->streams[index_video_stream]->codecpar->codec_id)<<endl;
-    //输出视频编码
-    cout<<"音频编码："<<avcodec_get_name(fmt_ctx->streams[index_audio_stream]->codecpar->codec_id)<<endl;
-    //输出音频编码
-    cout<<"音频通道数："<<fmt_ctx->streams[index_audio_stream]->codecpar->channels<<endl;
-    cout << "thread_count = " << codec_ctx_video->thread_count << endl;
-    for(unsigned i=0;i<fmt_ctx->nb_streams;i++){
-        cout<<i<<endl;
-        cout<<av_get_media_type_string(fmt_ctx->streams[i]->codec->codec_type)<<endl;
-    }
+    //找到并打开音频解码器
+    audioCodec= avcodec_find_decoder(fmt_ctx->streams[index_audio_stream]->codecpar->codec_id);
+    codec_ctx_audio= avcodec_alloc_context3((audioCodec));
+    cout<<avcodec_get_name(fmt_ctx->streams[index_audio_stream]->codecpar->codec_id)<<endl;
+    wanted_spec.freq=codec_ctx_audio->sample_rate;
+    wanted_spec.format = AUDIO_S16SYS;
+    wanted_spec.channels = codec_ctx_audio->channels;
+    wanted_spec.silence = 0;
+    wanted_spec.samples = SDL_AUDIO_BUFFER_SIZE;
+//    wanted_spec.callback = audio_callback;
+    wanted_spec.userdata = codec_ctx_audio;
+    av_dump_format(fmt_ctx,0,0,0);
+    //输出文件信息
 
     if ((avcodec_open2(codec_ctx_video, videoCodec, NULL)) < 0) {
         cout << "cannot open specified audio codec" << endl;
