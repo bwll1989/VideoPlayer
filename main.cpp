@@ -18,9 +18,8 @@ int main(int argc, char *argv[])
     AVCodecContext*     p_codec_ctx = NULL;
     AVCodecParameters*  p_codec_par = NULL;
     AVCodec*            p_codec = NULL;
-    AVFrame*            p_frm_raw = NULL;        // 帧，由包解码得到原始帧
-    AVFrame*            p_frm_yuv = NULL;        // 帧，由原始帧色彩转换得到
-    AVPacket*           p_packet = NULL;         // 包，从流中读出的一段数据
+
+//    AVPacket*           p_packet = NULL;         // 包，从流中读出的一段数据
     struct SwsContext*  sws_ctx = NULL;
     int                 buf_size;
     uint8_t*            buffer = NULL;
@@ -32,7 +31,7 @@ int main(int argc, char *argv[])
     SDL_Texture*        sdl_texture;
     SDL_Rect            sdl_rect;
 
-    string source_url = "/Users/wubin/Documents/Vscode/VideoPlayer/cmake-build-debug/test.mp4";
+    string source_url = "/Users/wubin/Documents/Vscode/VideoPlayer/cmake-build-debug/test2.mp4";
 
     if (avformat_open_input(&p_fmt_ctx, source_url.c_str(), NULL, NULL)) { // 打开媒体源，构建AVFormatContext
         cerr << "could not open source file:" << source_url << endl;
@@ -114,9 +113,10 @@ int main(int argc, char *argv[])
 
     // A6. 分配AVFrame
     // A6.1 分配AVFrame结构，注意并不分配data buffer(即AVFrame.*data[])
-    p_frm_raw = av_frame_alloc();
-    p_frm_yuv = av_frame_alloc();
 
+    AVFrame *p_frm_raw = av_frame_alloc();
+    AVFrame *p_frm_yuv = av_frame_alloc();
+    AVPacket *p_packet = av_packet_alloc();
     // A6.2 为AVFrame.*data[]手工分配缓冲区，用于存储sws_scale()中目的帧视频数据
     //     p_frm_raw的data_buffer由av_read_frame()分配，因此不需手工分配
     //     p_frm_yuv的data_buffer无处分配，因此在此处手工分配
@@ -199,6 +199,7 @@ int main(int argc, char *argv[])
     sdl_rect.h = p_codec_ctx->height;
 
     p_packet = (AVPacket *)av_malloc(sizeof(AVPacket));
+
     // A8. 从视频文件中读取一个packet
     //     packet可能是视频帧、音频帧或其他数据，解码器只会解码视频帧或音频帧，非音视频数据并不会被
     //     扔掉、从而能向解码器提供尽可能多的信息
@@ -221,6 +222,7 @@ int main(int argc, char *argv[])
                 return -1;
             }
             // A9.2 接收解码器输出的数据，此处只处理视频帧，每次接收一个packet，将之解码得到一个frame
+
             ret = avcodec_receive_frame(p_codec_ctx, p_frm_raw);
 
             if (ret != 0)
